@@ -1,66 +1,58 @@
 -- 10DLC SMS Platform Database Schema
--- PostgreSQL 15+ Compatible
--- Version: 1.0
+-- MySQL 8.0+ Compatible
+-- Version: 1.0 (Updated for MySQL)
 -- Last Updated: December 2024
 
 -- =============================================================================
--- EXTENSIONS AND CONFIGURATION
+-- DATABASE CREATION AND CONFIGURATION
 -- =============================================================================
 
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "btree_gin";
+-- Create database (run this first)
+-- CREATE DATABASE sms_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE sms_platform;
+
+-- Set MySQL specific settings
+SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO';
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================================================
--- CUSTOM TYPES AND ENUMS
+-- CUSTOM TYPES AND ENUMS (MySQL ENUM equivalent)
 -- =============================================================================
+
+-- Note: MySQL uses ENUM types directly in column definitions
+-- These are documented here for reference
 
 -- User and organization related enums
-CREATE TYPE user_role AS ENUM ('super_admin', 'admin', 'user');
-CREATE TYPE organization_type AS ENUM ('corporation', 'llc', 'partnership', 'sole_proprietorship', 'non_profit', 'government');
-CREATE TYPE organization_role AS ENUM ('owner', 'admin', 'manager', 'member');
-CREATE TYPE verification_status AS ENUM ('pending', 'in_progress', 'verified', 'rejected');
+-- user_role: 'super_admin', 'admin', 'user'
+-- organization_type: 'corporation', 'llc', 'partnership', 'sole_proprietorship', 'non_profit', 'government'
+-- organization_role: 'owner', 'admin', 'manager', 'member'
+-- verification_status: 'pending', 'in_progress', 'verified', 'rejected'
 
 -- Brand and campaign related enums
-CREATE TYPE brand_entity_type AS ENUM ('private_profit', 'public_profit', 'non_profit', 'government');
-CREATE TYPE identity_status AS ENUM ('unverified', 'pending', 'verified', 'failed');
-CREATE TYPE brand_status AS ENUM ('draft', 'pending', 'approved', 'suspended', 'rejected');
-CREATE TYPE brand_relationship AS ENUM ('basic_t', 'standard_t', 'premium_t');
+-- brand_entity_type: 'private_profit', 'public_profit', 'non_profit', 'government'
+-- identity_status: 'unverified', 'pending', 'verified', 'failed'
+-- brand_status: 'draft', 'pending', 'approved', 'suspended', 'rejected'
+-- brand_relationship: 'basic_t', 'standard_t', 'premium_t'
 
 -- Campaign use cases as defined by TCR
-CREATE TYPE campaign_use_case AS ENUM (
-    'marketing', 'mixed', 'account_notification', 'customer_care', 
-    'delivery_notification', 'fraud_alert', 'higher_education',
-    'low_volume', 'emergency', 'charity', 'political',
-    'public_service_announcement', 'social_media'
-);
-CREATE TYPE campaign_status AS ENUM ('draft', 'pending', 'approved', 'suspended', 'rejected');
+-- campaign_use_case: 'marketing', 'mixed', 'account_notification', 'customer_care', 'delivery_notification', 'fraud_alert', 'higher_education', 'low_volume', 'emergency', 'charity', 'political', 'public_service_announcement', 'social_media'
+-- campaign_status: 'draft', 'pending', 'approved', 'suspended', 'rejected'
 
 -- Message related enums
-CREATE TYPE message_direction AS ENUM ('inbound', 'outbound');
-CREATE TYPE message_status AS ENUM (
-    'queued', 'sending', 'sent', 'delivered', 'undelivered', 
-    'failed', 'received', 'read'
-);
+-- message_direction: 'inbound', 'outbound'
+-- message_status: 'queued', 'sending', 'sent', 'delivered', 'undelivered', 'failed', 'received', 'read'
 
 -- Phone number types and statuses
-CREATE TYPE phone_number_type AS ENUM ('local', 'toll_free', '10dlc');
-CREATE TYPE phone_number_status AS ENUM ('active', 'inactive', 'pending', 'suspended');
+-- phone_number_type: 'local', 'toll_free', '10dlc'
+-- phone_number_status: 'active', 'inactive', 'pending', 'suspended'
 
 -- Compliance related enums
-CREATE TYPE consent_type AS ENUM ('sms_marketing', 'sms_transactional', 'sms_service', 'email_marketing');
-CREATE TYPE consent_status AS ENUM ('granted', 'withdrawn', 'expired');
-CREATE TYPE audit_action AS ENUM (
-    'create', 'read', 'update', 'delete', 'login', 'logout',
-    'export', 'import', 'send_message', 'approve', 'reject'
-);
-CREATE TYPE violation_type AS ENUM (
-    'unauthorized_message', 'missing_consent', 'content_violation',
-    'rate_limit_exceeded', 'invalid_opt_out', 'data_breach'
-);
-CREATE TYPE violation_severity AS ENUM ('low', 'medium', 'high', 'critical');
-CREATE TYPE violation_status AS ENUM ('open', 'investigating', 'resolved', 'closed');
+-- consent_type: 'sms_marketing', 'sms_transactional', 'sms_service', 'email_marketing'
+-- consent_status: 'granted', 'withdrawn', 'expired'
+-- audit_action: 'create', 'read', 'update', 'delete', 'login', 'logout', 'export', 'import', 'send_message', 'approve', 'reject'
+-- violation_type: 'unauthorized_message', 'missing_consent', 'content_violation', 'rate_limit_exceeded', 'invalid_opt_out', 'data_breach'
+-- violation_severity: 'low', 'medium', 'high', 'critical'
+-- violation_status: 'open', 'investigating', 'resolved', 'closed'
 
 -- =============================================================================
 -- CORE USER AND ORGANIZATION TABLES
@@ -68,42 +60,46 @@ CREATE TYPE violation_status AS ENUM ('open', 'investigating', 'resolved', 'clos
 
 -- Users table - Core user authentication and profile information
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
-    role user_role NOT NULL DEFAULT 'user',
+    role ENUM('super_admin', 'admin', 'user') NOT NULL DEFAULT 'user',
     email_verified BOOLEAN DEFAULT FALSE,
     email_verification_token VARCHAR(255),
-    email_verification_expires TIMESTAMP,
+    email_verification_expires DATETIME,
     phone_verified BOOLEAN DEFAULT FALSE,
     phone_verification_token VARCHAR(10),
-    phone_verification_expires TIMESTAMP,
+    phone_verification_expires DATETIME,
     mfa_enabled BOOLEAN DEFAULT FALSE,
     mfa_secret VARCHAR(255),
-    mfa_backup_codes TEXT[],
+    mfa_backup_codes JSON,
     password_reset_token VARCHAR(255),
-    password_reset_expires TIMESTAMP,
-    last_login_at TIMESTAMP,
-    login_attempts INTEGER DEFAULT 0,
-    locked_until TIMESTAMP,
+    password_reset_expires DATETIME,
+    last_login_at DATETIME,
+    login_attempts INT DEFAULT 0,
+    locked_until DATETIME,
     timezone VARCHAR(50) DEFAULT 'UTC',
     locale VARCHAR(10) DEFAULT 'en',
     avatar_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    
+    INDEX idx_users_email (email),
+    INDEX idx_users_role (role),
+    INDEX idx_users_deleted_at (deleted_at)
 );
 
 -- Organizations table - Business entities that use the platform
 CREATE TABLE organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     legal_name VARCHAR(255) NOT NULL,
     display_name VARCHAR(255),
     ein VARCHAR(20) UNIQUE,
-    business_type organization_type NOT NULL,
+    business_type ENUM('corporation', 'llc', 'partnership', 'sole_proprietorship', 'non_profit', 'government') NOT NULL,
     industry VARCHAR(100),
     website_url VARCHAR(500),
     phone_number VARCHAR(20),
@@ -114,10 +110,10 @@ CREATE TABLE organizations (
     state VARCHAR(50),
     postal_code VARCHAR(20),
     country VARCHAR(50) DEFAULT 'US',
-    verification_status verification_status DEFAULT 'pending',
+    verification_status ENUM('pending', 'in_progress', 'verified', 'rejected') DEFAULT 'pending',
     verification_notes TEXT,
-    verified_at TIMESTAMP,
-    verified_by UUID REFERENCES users(id),
+    verified_at DATETIME,
+    verified_by CHAR(36),
     billing_address_line1 VARCHAR(255),
     billing_address_line2 VARCHAR(255),
     billing_city VARCHAR(100),
@@ -126,32 +122,43 @@ CREATE TABLE organizations (
     billing_country VARCHAR(50) DEFAULT 'US',
     tax_id VARCHAR(50),
     annual_revenue BIGINT,
-    employee_count INTEGER,
-    founded_year INTEGER,
+    employee_count INT,
+    founded_year INT,
     logo_url VARCHAR(500),
     description TEXT,
-    settings JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    settings JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    
+    INDEX idx_organizations_ein (ein),
+    INDEX idx_organizations_verification_status (verification_status),
+    FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- User organization relationships - Many-to-many with roles
 CREATE TABLE user_organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    role organization_role NOT NULL DEFAULT 'member',
-    permissions JSONB DEFAULT '{}',
-    invited_by UUID REFERENCES users(id),
-    invited_at TIMESTAMP,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    organization_id CHAR(36) NOT NULL,
+    role ENUM('owner', 'admin', 'manager', 'member') NOT NULL DEFAULT 'member',
+    permissions JSON,
+    invited_by CHAR(36),
+    invited_at DATETIME,
     invitation_token VARCHAR(255),
-    invitation_expires TIMESTAMP,
-    joined_at TIMESTAMP,
+    invitation_expires DATETIME,
+    joined_at DATETIME,
     status VARCHAR(20) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, organization_id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY uk_user_org (user_id, organization_id),
+    INDEX idx_user_organizations_user_id (user_id),
+    INDEX idx_user_organizations_org_id (organization_id),
+    INDEX idx_user_organizations_role (role),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================================================
@@ -160,11 +167,11 @@ CREATE TABLE user_organizations (
 
 -- Brands table - TCR Brand Registration entities
 CREATE TABLE brands (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     tcr_brand_id VARCHAR(100) UNIQUE,
     brand_name VARCHAR(255) NOT NULL,
-    entity_type brand_entity_type NOT NULL,
+    entity_type ENUM('private_profit', 'public_profit', 'non_profit', 'government') NOT NULL,
     industry VARCHAR(100) NOT NULL,
     website VARCHAR(500) NOT NULL,
     stock_symbol VARCHAR(10),
@@ -175,15 +182,15 @@ CREATE TABLE brands (
     phone_number VARCHAR(20),
     email VARCHAR(255),
     
-    -- Address stored as JSONB for flexibility
-    address JSONB NOT NULL, -- {line1, line2, city, state, postal_code, country}
+    -- Address stored as JSON for flexibility
+    address JSON NOT NULL,
     
     -- TCR specific fields
-    identity_status identity_status DEFAULT 'unverified',
-    registration_status brand_status DEFAULT 'draft',
-    trust_score INTEGER,
-    compliance_score INTEGER,
-    brand_relationship brand_relationship DEFAULT 'basic_t',
+    identity_status ENUM('unverified', 'pending', 'verified', 'failed') DEFAULT 'unverified',
+    registration_status ENUM('draft', 'pending', 'approved', 'suspended', 'rejected') DEFAULT 'draft',
+    trust_score INT,
+    compliance_score INT,
+    brand_relationship ENUM('basic_t', 'standard_t', 'premium_t') DEFAULT 'basic_t',
     
     -- Additional brand information
     company_description TEXT,
@@ -194,30 +201,37 @@ CREATE TABLE brands (
     privacy_policy_url VARCHAR(500),
     
     -- Social media and verification
-    social_media_urls JSONB DEFAULT '{}', -- {facebook, twitter, linkedin, etc}
-    verification_documents JSONB DEFAULT '[]', -- Array of document references
+    social_media_urls JSON,
+    verification_documents JSON,
     
     -- Status and timestamps
     mock BOOLEAN DEFAULT FALSE,
-    submitted_at TIMESTAMP,
-    approved_at TIMESTAMP,
+    submitted_at DATETIME,
+    approved_at DATETIME,
     rejection_reason TEXT,
-    next_review_date TIMESTAMP,
+    next_review_date DATETIME,
     
-    created_by UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    created_by CHAR(36) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    
+    INDEX idx_brands_org_id (organization_id),
+    INDEX idx_brands_tcr_id (tcr_brand_id),
+    INDEX idx_brands_status (registration_status),
+    INDEX idx_brands_created_by (created_by),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- Campaigns table - TCR Campaign Registration entities
 CREATE TABLE campaigns (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    brand_id UUID NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    brand_id CHAR(36) NOT NULL,
     tcr_campaign_id VARCHAR(100) UNIQUE,
     campaign_name VARCHAR(255) NOT NULL,
-    use_case campaign_use_case NOT NULL,
-    sub_use_cases TEXT[], -- Additional sub-classifications
+    use_case ENUM('marketing', 'mixed', 'account_notification', 'customer_care', 'delivery_notification', 'fraud_alert', 'higher_education', 'low_volume', 'emergency', 'charity', 'political', 'public_service_announcement', 'social_media') NOT NULL,
+    sub_use_cases JSON,
     description TEXT NOT NULL,
     
     -- Sample messages (required by TCR)
@@ -232,10 +246,10 @@ CREATE TABLE campaigns (
     auto_responder_enabled BOOLEAN DEFAULT FALSE,
     
     -- Keyword management
-    help_keywords TEXT[] DEFAULT ARRAY['HELP'],
+    help_keywords JSON,
     help_message TEXT DEFAULT 'For help, contact customer support.',
-    stop_keywords TEXT[] DEFAULT ARRAY['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'],
-    opt_in_keywords TEXT[],
+    stop_keywords JSON,
+    opt_in_keywords JSON,
     opt_in_message TEXT,
     opt_out_message TEXT DEFAULT 'You have been unsubscribed. Reply START to resubscribe.',
     
@@ -249,29 +263,36 @@ CREATE TABLE campaigns (
     age_gated BOOLEAN DEFAULT FALSE,
     
     -- Monthly message volume estimates
-    estimated_monthly_volume INTEGER,
-    peak_daily_volume INTEGER,
-    peak_hourly_volume INTEGER,
+    estimated_monthly_volume INT,
+    peak_daily_volume INT,
+    peak_hourly_volume INT,
     
     -- Campaign settings
-    rate_limit_per_minute INTEGER DEFAULT 10,
-    rate_limit_per_hour INTEGER DEFAULT 100,
-    rate_limit_per_day INTEGER DEFAULT 1000,
+    rate_limit_per_minute INT DEFAULT 10,
+    rate_limit_per_hour INT DEFAULT 100,
+    rate_limit_per_day INT DEFAULT 1000,
     time_zone VARCHAR(50) DEFAULT 'UTC',
     send_window_start TIME DEFAULT '08:00:00',
     send_window_end TIME DEFAULT '21:00:00',
     
     -- Status and approval
-    registration_status campaign_status DEFAULT 'draft',
+    registration_status ENUM('draft', 'pending', 'approved', 'suspended', 'rejected') DEFAULT 'draft',
     mock BOOLEAN DEFAULT FALSE,
-    submitted_at TIMESTAMP,
-    approved_at TIMESTAMP,
+    submitted_at DATETIME,
+    approved_at DATETIME,
     rejection_reason TEXT,
     
-    created_by UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    created_by CHAR(36) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    
+    INDEX idx_campaigns_brand_id (brand_id),
+    INDEX idx_campaigns_tcr_id (tcr_campaign_id),
+    INDEX idx_campaigns_use_case (use_case),
+    INDEX idx_campaigns_status (registration_status),
+    FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- =============================================================================
@@ -280,16 +301,16 @@ CREATE TABLE campaigns (
 
 -- Phone numbers table - Manage phone numbers and their assignments
 CREATE TABLE phone_numbers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     phone_number VARCHAR(20) NOT NULL UNIQUE,
     friendly_name VARCHAR(100),
-    phone_number_sid VARCHAR(100) UNIQUE, -- Twilio SID
-    phone_number_type phone_number_type NOT NULL,
-    status phone_number_status DEFAULT 'pending',
+    phone_number_sid VARCHAR(100) UNIQUE,
+    phone_number_type ENUM('local', 'toll_free', '10dlc') NOT NULL,
+    status ENUM('active', 'inactive', 'pending', 'suspended') DEFAULT 'pending',
     
     -- Assignment and capabilities
-    assigned_to_campaign_id UUID REFERENCES campaigns(id),
+    assigned_to_campaign_id CHAR(36),
     sms_enabled BOOLEAN DEFAULT TRUE,
     voice_enabled BOOLEAN DEFAULT FALSE,
     mms_enabled BOOLEAN DEFAULT FALSE,
@@ -304,15 +325,22 @@ CREATE TABLE phone_numbers (
     monthly_cost DECIMAL(10,4),
     setup_cost DECIMAL(10,4),
     per_message_cost DECIMAL(10,4),
-    monthly_message_limit INTEGER,
+    monthly_message_limit INT,
     
     -- Purchase and assignment dates
-    purchased_at TIMESTAMP,
-    assigned_at TIMESTAMP,
-    released_at TIMESTAMP,
+    purchased_at DATETIME,
+    assigned_at DATETIME,
+    released_at DATETIME,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_phone_numbers_org_id (organization_id),
+    INDEX idx_phone_numbers_campaign_id (assigned_to_campaign_id),
+    INDEX idx_phone_numbers_status (status),
+    INDEX idx_phone_numbers_type (phone_number_type),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to_campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL
 );
 
 -- =============================================================================
@@ -321,14 +349,14 @@ CREATE TABLE phone_numbers (
 
 -- Contact lists table - Organize contacts into lists
 CREATE TABLE contact_lists (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    tags TEXT[],
-    total_contacts INTEGER DEFAULT 0,
-    active_contacts INTEGER DEFAULT 0,
-    opted_in_contacts INTEGER DEFAULT 0,
+    tags JSON,
+    total_contacts INT DEFAULT 0,
+    active_contacts INT DEFAULT 0,
+    opted_in_contacts INT DEFAULT 0,
     
     -- List settings
     double_opt_in_required BOOLEAN DEFAULT FALSE,
@@ -336,83 +364,106 @@ CREATE TABLE contact_lists (
     unsubscribe_message TEXT,
     
     -- Custom fields definition
-    custom_fields JSONB DEFAULT '{}', -- {field_name: {type, required, options}}
+    custom_fields JSON,
     
-    created_by UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    created_by CHAR(36) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    
+    INDEX idx_contact_lists_org_id (organization_id),
+    INDEX idx_contact_lists_created_by (created_by),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- Contacts table - Individual contact records
 CREATE TABLE contacts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
     email VARCHAR(255),
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     
     -- Custom fields data
-    custom_fields JSONB DEFAULT '{}',
+    custom_fields JSON,
     
     -- Consent and preferences
     opted_in BOOLEAN DEFAULT FALSE,
-    opted_in_at TIMESTAMP,
-    opted_in_source VARCHAR(100), -- 'web_form', 'api', 'import', 'sms'
-    opted_in_ip INET,
+    opted_in_at DATETIME,
+    opted_in_source VARCHAR(100),
+    opted_in_ip VARCHAR(45),
     opted_in_user_agent TEXT,
     double_opt_in_confirmed BOOLEAN DEFAULT FALSE,
-    double_opt_in_confirmed_at TIMESTAMP,
+    double_opt_in_confirmed_at DATETIME,
     
     opted_out BOOLEAN DEFAULT FALSE,
-    opted_out_at TIMESTAMP,
+    opted_out_at DATETIME,
     opted_out_source VARCHAR(100),
     opt_out_reason VARCHAR(255),
     
     -- Suppression and blocking
     suppressed BOOLEAN DEFAULT FALSE,
     suppressed_reason VARCHAR(255),
-    suppressed_at TIMESTAMP,
-    suppressed_by UUID REFERENCES users(id),
+    suppressed_at DATETIME,
+    suppressed_by CHAR(36),
     
     -- Delivery tracking
-    bounce_count INTEGER DEFAULT 0,
-    last_bounce_at TIMESTAMP,
-    complaint_count INTEGER DEFAULT 0,
-    last_complaint_at TIMESTAMP,
+    bounce_count INT DEFAULT 0,
+    last_bounce_at DATETIME,
+    complaint_count INT DEFAULT 0,
+    last_complaint_at DATETIME,
     
     -- Engagement metrics
-    total_messages_sent INTEGER DEFAULT 0,
-    total_messages_delivered INTEGER DEFAULT 0,
-    total_messages_failed INTEGER DEFAULT 0,
-    last_message_sent_at TIMESTAMP,
-    last_message_delivered_at TIMESTAMP,
-    last_response_at TIMESTAMP,
+    total_messages_sent INT DEFAULT 0,
+    total_messages_delivered INT DEFAULT 0,
+    total_messages_failed INT DEFAULT 0,
+    last_message_sent_at DATETIME,
+    last_message_delivered_at DATETIME,
+    last_response_at DATETIME,
     
     -- Location and timezone
     timezone VARCHAR(50),
     country VARCHAR(50),
     region VARCHAR(100),
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
     
-    UNIQUE(organization_id, phone_number)
+    UNIQUE KEY uk_org_phone (organization_id, phone_number),
+    INDEX idx_contacts_org_id (organization_id),
+    INDEX idx_contacts_phone (phone_number),
+    INDEX idx_contacts_email (email),
+    INDEX idx_contacts_opted_in (opted_in),
+    INDEX idx_contacts_opted_out (opted_out),
+    INDEX idx_contacts_suppressed (suppressed),
+    INDEX idx_contacts_org_opted_in (organization_id, opted_in),
+    INDEX idx_contacts_org_created (organization_id, created_at),
+    INDEX idx_contacts_org_last_message (organization_id, last_message_sent_at),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (suppressed_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Contact list memberships - Many-to-many relationship
 CREATE TABLE contact_list_memberships (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contact_list_id UUID NOT NULL REFERENCES contact_lists(id) ON DELETE CASCADE,
-    contact_id UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'active', -- 'active', 'unsubscribed', 'bounced'
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    added_by UUID REFERENCES users(id),
-    removed_at TIMESTAMP,
-    removed_by UUID REFERENCES users(id),
-    UNIQUE(contact_list_id, contact_id)
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    contact_list_id CHAR(36) NOT NULL,
+    contact_id CHAR(36) NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    added_by CHAR(36),
+    removed_at DATETIME,
+    removed_by CHAR(36),
+    
+    UNIQUE KEY uk_list_contact (contact_list_id, contact_id),
+    INDEX idx_contact_list_memberships_list_id (contact_list_id),
+    INDEX idx_contact_list_memberships_contact_id (contact_id),
+    FOREIGN KEY (contact_list_id) REFERENCES contact_lists(id) ON DELETE CASCADE,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+    FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (removed_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================================================
@@ -421,11 +472,11 @@ CREATE TABLE contact_list_memberships (
 
 -- Messages table - All sent and received messages
 CREATE TABLE messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    campaign_id UUID REFERENCES campaigns(id),
-    contact_id UUID REFERENCES contacts(id),
-    phone_number_id UUID REFERENCES phone_numbers(id),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
+    campaign_id CHAR(36),
+    contact_id CHAR(36),
+    phone_number_id CHAR(36),
     
     -- Twilio integration
     message_sid VARCHAR(100) UNIQUE,
@@ -433,18 +484,18 @@ CREATE TABLE messages (
     messaging_service_sid VARCHAR(100),
     
     -- Message details
-    direction message_direction NOT NULL,
+    direction ENUM('inbound', 'outbound') NOT NULL,
     from_number VARCHAR(20) NOT NULL,
     to_number VARCHAR(20) NOT NULL,
     body TEXT,
-    num_segments INTEGER DEFAULT 1,
+    num_segments INT DEFAULT 1,
     
     -- Media attachments (MMS)
-    media_urls TEXT[],
-    num_media INTEGER DEFAULT 0,
+    media_urls JSON,
+    num_media INT DEFAULT 0,
     
     -- Status and delivery
-    status message_status DEFAULT 'queued',
+    status ENUM('queued', 'sending', 'sent', 'delivered', 'undelivered', 'failed', 'received', 'read') DEFAULT 'queued',
     error_code VARCHAR(20),
     error_message TEXT,
     
@@ -453,50 +504,79 @@ CREATE TABLE messages (
     price_unit VARCHAR(10) DEFAULT 'USD',
     
     -- Message metadata
-    template_id UUID, -- Reference to message template if used
-    variables JSONB DEFAULT '{}', -- Template variables used
-    tags TEXT[],
+    template_id CHAR(36),
+    variables JSON,
+    tags JSON,
     
     -- Scheduling
-    scheduled_at TIMESTAMP,
-    sent_at TIMESTAMP,
-    delivered_at TIMESTAMP,
-    failed_at TIMESTAMP,
+    scheduled_at DATETIME,
+    sent_at DATETIME,
+    delivered_at DATETIME,
+    failed_at DATETIME,
     
     -- Analytics
-    clicked_links TEXT[], -- URLs clicked in message
-    link_clicks_count INTEGER DEFAULT 0,
+    clicked_links JSON,
+    link_clicks_count INT DEFAULT 0,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_messages_org_id (organization_id),
+    INDEX idx_messages_campaign_id (campaign_id),
+    INDEX idx_messages_contact_id (contact_id),
+    INDEX idx_messages_phone_number_id (phone_number_id),
+    INDEX idx_messages_message_sid (message_sid),
+    INDEX idx_messages_direction (direction),
+    INDEX idx_messages_status (status),
+    INDEX idx_messages_created_at (created_at),
+    INDEX idx_messages_sent_at (sent_at),
+    INDEX idx_messages_from_number (from_number),
+    INDEX idx_messages_to_number (to_number),
+    INDEX idx_messages_org_created (organization_id, created_at),
+    INDEX idx_messages_campaign_created (campaign_id, created_at),
+    INDEX idx_messages_status_created (status, created_at),
+    INDEX idx_messages_org_status_created (organization_id, status, created_at),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
+    FOREIGN KEY (phone_number_id) REFERENCES phone_numbers(id) ON DELETE SET NULL
 );
 
 -- Message templates table - Reusable message templates
 CREATE TABLE message_templates (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    campaign_id UUID REFERENCES campaigns(id),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
+    campaign_id CHAR(36),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     
     -- Template content
     body TEXT NOT NULL,
-    variables JSONB DEFAULT '{}', -- Variable definitions and defaults
+    variables JSON,
     
     -- Template settings
-    category VARCHAR(100), -- 'welcome', 'promotional', 'transactional', etc.
+    category VARCHAR(100),
     is_approved BOOLEAN DEFAULT FALSE,
-    approved_by UUID REFERENCES users(id),
-    approved_at TIMESTAMP,
+    approved_by CHAR(36),
+    approved_at DATETIME,
     
     -- Usage statistics
-    usage_count INTEGER DEFAULT 0,
-    last_used_at TIMESTAMP,
+    usage_count INT DEFAULT 0,
+    last_used_at DATETIME,
     
-    created_by UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    created_by CHAR(36) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    
+    INDEX idx_message_templates_org_id (organization_id),
+    INDEX idx_message_templates_campaign_id (campaign_id),
+    INDEX idx_message_templates_category (category),
+    INDEX idx_message_templates_created_by (created_by),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================================================
@@ -505,115 +585,143 @@ CREATE TABLE message_templates (
 
 -- Consent records table - Track consent for communications
 CREATE TABLE consent_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contact_id UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    campaign_id UUID REFERENCES campaigns(id),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    contact_id CHAR(36) NOT NULL,
+    organization_id CHAR(36) NOT NULL,
+    campaign_id CHAR(36),
     
     -- Consent details
-    consent_type consent_type NOT NULL,
-    consent_status consent_status NOT NULL,
-    consent_source VARCHAR(100) NOT NULL, -- 'web_form', 'sms', 'phone', 'email'
-    consent_text TEXT, -- The actual consent language shown
+    consent_type ENUM('sms_marketing', 'sms_transactional', 'sms_service', 'email_marketing') NOT NULL,
+    consent_status ENUM('granted', 'withdrawn', 'expired') NOT NULL,
+    consent_source VARCHAR(100) NOT NULL,
+    consent_text TEXT,
     
     -- Technical details
-    ip_address INET,
+    ip_address VARCHAR(45),
     user_agent TEXT,
-    location JSONB, -- {country, region, city, lat, lng}
+    location JSON,
     
     -- Double opt-in details
     double_opt_in BOOLEAN DEFAULT FALSE,
-    verification_method VARCHAR(100), -- 'email', 'sms', 'phone'
-    verification_sent_at TIMESTAMP,
-    verification_confirmed_at TIMESTAMP,
+    verification_method VARCHAR(100),
+    verification_sent_at DATETIME,
+    verification_confirmed_at DATETIME,
     verification_token VARCHAR(255),
     
     -- Withdrawal details
-    withdrawal_timestamp TIMESTAMP,
+    withdrawal_timestamp DATETIME,
     withdrawal_reason VARCHAR(255),
     withdrawal_method VARCHAR(100),
     
     -- Legal and compliance
-    consent_version VARCHAR(50), -- Version of consent form/process
-    legal_basis VARCHAR(100), -- GDPR legal basis
-    retention_period INTEGER, -- Days to retain consent record
+    consent_version VARCHAR(50),
+    legal_basis VARCHAR(100),
+    retention_period INT,
     
     -- Additional metadata
-    metadata JSONB DEFAULT '{}',
+    metadata JSON,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_consent_records_contact_id (contact_id),
+    INDEX idx_consent_records_org_id (organization_id),
+    INDEX idx_consent_records_campaign_id (campaign_id),
+    INDEX idx_consent_records_status (consent_status),
+    INDEX idx_consent_records_type (consent_type),
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL
 );
 
 -- Audit logs table - Comprehensive audit trail
 CREATE TABLE audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36),
+    user_id CHAR(36),
     
     -- Action details
-    entity_type VARCHAR(100) NOT NULL, -- 'user', 'brand', 'campaign', 'message'
-    entity_id UUID,
-    action audit_action NOT NULL,
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id CHAR(36),
+    action ENUM('create', 'read', 'update', 'delete', 'login', 'logout', 'export', 'import', 'send_message', 'approve', 'reject') NOT NULL,
     
     -- Change tracking
-    old_values JSONB,
-    new_values JSONB,
+    old_values JSON,
+    new_values JSON,
     
     -- Request details
-    ip_address INET,
+    ip_address VARCHAR(45),
     user_agent TEXT,
     session_id VARCHAR(255),
     request_id VARCHAR(255),
     
     -- Additional context
     description TEXT,
-    metadata JSONB DEFAULT '{}',
+    metadata JSON,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_audit_logs_org_id (organization_id),
+    INDEX idx_audit_logs_user_id (user_id),
+    INDEX idx_audit_logs_entity (entity_type, entity_id),
+    INDEX idx_audit_logs_action (action),
+    INDEX idx_audit_logs_created_at (created_at),
+    INDEX idx_audit_logs_org_created (organization_id, created_at),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Compliance violations table - Track and manage violations
 CREATE TABLE compliance_violations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     
     -- Violation details
-    violation_type violation_type NOT NULL,
-    severity violation_severity NOT NULL,
-    entity_type VARCHAR(100), -- What entity is involved
-    entity_id UUID, -- ID of the involved entity
+    violation_type ENUM('unauthorized_message', 'missing_consent', 'content_violation', 'rate_limit_exceeded', 'invalid_opt_out', 'data_breach') NOT NULL,
+    severity ENUM('low', 'medium', 'high', 'critical') NOT NULL,
+    entity_type VARCHAR(100),
+    entity_id CHAR(36),
     
     -- Description and evidence
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    evidence JSONB DEFAULT '{}', -- Supporting evidence/data
+    evidence JSON,
     
     -- Detection and reporting
-    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    detected_by VARCHAR(100), -- 'system', 'user', 'external'
-    detection_method VARCHAR(100), -- 'automated_scan', 'user_report', 'audit'
-    reporter_id UUID REFERENCES users(id),
+    detected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    detected_by VARCHAR(100),
+    detection_method VARCHAR(100),
+    reporter_id CHAR(36),
     
     -- Resolution tracking
-    status violation_status DEFAULT 'open',
-    assigned_to UUID REFERENCES users(id),
-    resolved_at TIMESTAMP,
-    resolved_by UUID REFERENCES users(id),
+    status ENUM('open', 'investigating', 'resolved', 'closed') DEFAULT 'open',
+    assigned_to CHAR(36),
+    resolved_at DATETIME,
+    resolved_by CHAR(36),
     resolution_notes TEXT,
     
     -- Follow-up and prevention
     corrective_action TEXT,
     prevention_measures TEXT,
-    next_review_date TIMESTAMP,
+    next_review_date DATETIME,
     
     -- External reporting
     reported_to_authorities BOOLEAN DEFAULT FALSE,
     authority_reference VARCHAR(255),
-    reported_at TIMESTAMP,
+    reported_at DATETIME,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_compliance_violations_org_id (organization_id),
+    INDEX idx_compliance_violations_status (status),
+    INDEX idx_compliance_violations_severity (severity),
+    INDEX idx_compliance_violations_type (violation_type),
+    INDEX idx_violations_org_status (organization_id, status),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================================================
@@ -622,97 +730,114 @@ CREATE TABLE compliance_violations (
 
 -- API keys table - Manage API access
 CREATE TABLE api_keys (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
     
     -- Key details
     name VARCHAR(255) NOT NULL,
-    key_prefix VARCHAR(20) NOT NULL, -- First few characters for identification
-    key_hash VARCHAR(255) NOT NULL, -- Hashed full key
+    key_prefix VARCHAR(20) NOT NULL,
+    key_hash VARCHAR(255) NOT NULL,
     
     -- Permissions and limits
-    permissions JSONB DEFAULT '{}', -- API endpoint permissions
-    rate_limit_per_minute INTEGER DEFAULT 100,
-    rate_limit_per_hour INTEGER DEFAULT 1000,
-    rate_limit_per_day INTEGER DEFAULT 10000,
+    permissions JSON,
+    rate_limit_per_minute INT DEFAULT 100,
+    rate_limit_per_hour INT DEFAULT 1000,
+    rate_limit_per_day INT DEFAULT 10000,
     
     -- IP restrictions
-    allowed_ips INET[],
-    allowed_domains TEXT[],
+    allowed_ips JSON,
+    allowed_domains JSON,
     
     -- Status and expiry
     is_active BOOLEAN DEFAULT TRUE,
-    expires_at TIMESTAMP,
-    last_used_at TIMESTAMP,
-    usage_count INTEGER DEFAULT 0,
+    expires_at DATETIME,
+    last_used_at DATETIME,
+    usage_count INT DEFAULT 0,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_api_keys_org_id (organization_id),
+    INDEX idx_api_keys_user_id (user_id),
+    INDEX idx_api_keys_prefix (key_prefix),
+    INDEX idx_api_keys_active (is_active),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Webhooks table - Manage webhook endpoints
 CREATE TABLE webhooks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     
     -- Webhook details
     name VARCHAR(255) NOT NULL,
     url VARCHAR(500) NOT NULL,
-    secret VARCHAR(255), -- For signature verification
+    secret VARCHAR(255),
     
     -- Event subscriptions
-    events TEXT[] NOT NULL, -- Array of event types to subscribe to
+    events JSON NOT NULL,
     
     -- Configuration
     is_active BOOLEAN DEFAULT TRUE,
-    retry_attempts INTEGER DEFAULT 3,
-    timeout_seconds INTEGER DEFAULT 30,
+    retry_attempts INT DEFAULT 3,
+    timeout_seconds INT DEFAULT 30,
     
     -- Headers and authentication
-    headers JSONB DEFAULT '{}',
+    headers JSON,
     
     -- Status tracking
-    last_triggered_at TIMESTAMP,
-    last_success_at TIMESTAMP,
-    last_failure_at TIMESTAMP,
-    consecutive_failures INTEGER DEFAULT 0,
-    total_deliveries INTEGER DEFAULT 0,
-    successful_deliveries INTEGER DEFAULT 0,
+    last_triggered_at DATETIME,
+    last_success_at DATETIME,
+    last_failure_at DATETIME,
+    consecutive_failures INT DEFAULT 0,
+    total_deliveries INT DEFAULT 0,
+    successful_deliveries INT DEFAULT 0,
     
-    created_by UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_by CHAR(36) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_webhooks_org_id (organization_id),
+    INDEX idx_webhooks_active (is_active),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- Webhook deliveries table - Track webhook delivery attempts
 CREATE TABLE webhook_deliveries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    webhook_id UUID NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    webhook_id CHAR(36) NOT NULL,
     
     -- Event details
     event_type VARCHAR(100) NOT NULL,
-    event_id UUID NOT NULL,
-    payload JSONB NOT NULL,
+    event_id CHAR(36) NOT NULL,
+    payload JSON NOT NULL,
     
     -- Delivery details
-    attempt_number INTEGER NOT NULL DEFAULT 1,
-    http_status_code INTEGER,
-    response_headers JSONB,
+    attempt_number INT NOT NULL DEFAULT 1,
+    http_status_code INT,
+    response_headers JSON,
     response_body TEXT,
     
     -- Timing
-    triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    delivered_at TIMESTAMP,
-    duration_ms INTEGER,
+    triggered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    delivered_at DATETIME,
+    duration_ms INT,
     
     -- Status
     success BOOLEAN DEFAULT FALSE,
     error_message TEXT,
     
     -- Retry information
-    retry_at TIMESTAMP,
-    final_attempt BOOLEAN DEFAULT FALSE
+    retry_at DATETIME,
+    final_attempt BOOLEAN DEFAULT FALSE,
+    
+    INDEX idx_webhook_deliveries_webhook_id (webhook_id),
+    INDEX idx_webhook_deliveries_event_type (event_type),
+    INDEX idx_webhook_deliveries_triggered_at (triggered_at),
+    FOREIGN KEY (webhook_id) REFERENCES webhooks(id) ON DELETE CASCADE
 );
 
 -- =============================================================================
@@ -721,8 +846,8 @@ CREATE TABLE webhook_deliveries (
 
 -- Billing accounts table - Manage billing information
 CREATE TABLE billing_accounts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
     
     -- Stripe integration
     stripe_customer_id VARCHAR(255) UNIQUE,
@@ -736,206 +861,70 @@ CREATE TABLE billing_accounts (
     -- Plan information
     plan_name VARCHAR(100),
     plan_price DECIMAL(10,2),
-    billing_cycle VARCHAR(20), -- 'monthly', 'yearly'
+    billing_cycle VARCHAR(20),
     
     -- Usage limits
-    monthly_message_limit INTEGER,
-    monthly_contact_limit INTEGER,
-    team_member_limit INTEGER,
+    monthly_message_limit INT,
+    monthly_contact_limit INT,
+    team_member_limit INT,
     
     -- Status
-    status VARCHAR(20) DEFAULT 'active', -- 'active', 'suspended', 'cancelled'
-    trial_ends_at TIMESTAMP,
-    current_period_start TIMESTAMP,
-    current_period_end TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'active',
+    trial_ends_at DATETIME,
+    current_period_start DATETIME,
+    current_period_end DATETIME,
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_billing_accounts_org_id (organization_id),
+    INDEX idx_billing_accounts_stripe_customer (stripe_customer_id),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
 -- Usage tracking table - Track usage for billing
 CREATE TABLE usage_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    billing_account_id UUID REFERENCES billing_accounts(id),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    organization_id CHAR(36) NOT NULL,
+    billing_account_id CHAR(36),
     
     -- Usage period
-    period_start TIMESTAMP NOT NULL,
-    period_end TIMESTAMP NOT NULL,
+    period_start DATETIME NOT NULL,
+    period_end DATETIME NOT NULL,
     
     -- Usage metrics
-    messages_sent INTEGER DEFAULT 0,
-    messages_delivered INTEGER DEFAULT 0,
-    messages_failed INTEGER DEFAULT 0,
+    messages_sent INT DEFAULT 0,
+    messages_delivered INT DEFAULT 0,
+    messages_failed INT DEFAULT 0,
     total_message_cost DECIMAL(10,4) DEFAULT 0,
     
-    contacts_added INTEGER DEFAULT 0,
-    contacts_active INTEGER DEFAULT 0,
+    contacts_added INT DEFAULT 0,
+    contacts_active INT DEFAULT 0,
     
-    phone_numbers_active INTEGER DEFAULT 0,
+    phone_numbers_active INT DEFAULT 0,
     phone_number_costs DECIMAL(10,4) DEFAULT 0,
     
-    api_calls INTEGER DEFAULT 0,
-    webhook_deliveries INTEGER DEFAULT 0,
+    api_calls INT DEFAULT 0,
+    webhook_deliveries INT DEFAULT 0,
     
     -- Additional charges
-    overages JSONB DEFAULT '{}',
+    overages JSON,
     additional_charges DECIMAL(10,2) DEFAULT 0,
     
     -- Status
     billed BOOLEAN DEFAULT FALSE,
     invoice_id VARCHAR(255),
     
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    UNIQUE(organization_id, period_start, period_end)
+    UNIQUE KEY uk_org_period (organization_id, period_start, period_end),
+    INDEX idx_usage_records_org_id (organization_id),
+    INDEX idx_usage_records_billing_account (billing_account_id),
+    INDEX idx_usage_records_period (period_start, period_end),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (billing_account_id) REFERENCES billing_accounts(id) ON DELETE SET NULL
 );
-
--- =============================================================================
--- INDEXES FOR PERFORMANCE
--- =============================================================================
-
--- User and organization indexes
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_deleted_at ON users(deleted_at);
-CREATE INDEX idx_organizations_ein ON organizations(ein);
-CREATE INDEX idx_organizations_verification_status ON organizations(verification_status);
-CREATE INDEX idx_user_organizations_user_id ON user_organizations(user_id);
-CREATE INDEX idx_user_organizations_org_id ON user_organizations(organization_id);
-CREATE INDEX idx_user_organizations_role ON user_organizations(role);
-
--- Brand and campaign indexes
-CREATE INDEX idx_brands_org_id ON brands(organization_id);
-CREATE INDEX idx_brands_tcr_id ON brands(tcr_brand_id);
-CREATE INDEX idx_brands_status ON brands(registration_status);
-CREATE INDEX idx_brands_created_by ON brands(created_by);
-CREATE INDEX idx_campaigns_brand_id ON campaigns(brand_id);
-CREATE INDEX idx_campaigns_tcr_id ON campaigns(tcr_campaign_id);
-CREATE INDEX idx_campaigns_use_case ON campaigns(use_case);
-CREATE INDEX idx_campaigns_status ON campaigns(registration_status);
-
--- Phone number indexes
-CREATE INDEX idx_phone_numbers_org_id ON phone_numbers(organization_id);
-CREATE INDEX idx_phone_numbers_campaign_id ON phone_numbers(assigned_to_campaign_id);
-CREATE INDEX idx_phone_numbers_status ON phone_numbers(status);
-CREATE INDEX idx_phone_numbers_type ON phone_numbers(phone_number_type);
-
--- Contact and list indexes
-CREATE INDEX idx_contact_lists_org_id ON contact_lists(organization_id);
-CREATE INDEX idx_contact_lists_created_by ON contact_lists(created_by);
-CREATE INDEX idx_contacts_org_id ON contacts(organization_id);
-CREATE INDEX idx_contacts_phone ON contacts(phone_number);
-CREATE INDEX idx_contacts_email ON contacts(email);
-CREATE INDEX idx_contacts_opted_in ON contacts(opted_in);
-CREATE INDEX idx_contacts_opted_out ON contacts(opted_out);
-CREATE INDEX idx_contacts_suppressed ON contacts(suppressed);
-CREATE INDEX idx_contact_list_memberships_list_id ON contact_list_memberships(contact_list_id);
-CREATE INDEX idx_contact_list_memberships_contact_id ON contact_list_memberships(contact_id);
-
--- Message indexes
-CREATE INDEX idx_messages_org_id ON messages(organization_id);
-CREATE INDEX idx_messages_campaign_id ON messages(campaign_id);
-CREATE INDEX idx_messages_contact_id ON messages(contact_id);
-CREATE INDEX idx_messages_phone_number_id ON messages(phone_number_id);
-CREATE INDEX idx_messages_message_sid ON messages(message_sid);
-CREATE INDEX idx_messages_direction ON messages(direction);
-CREATE INDEX idx_messages_status ON messages(status);
-CREATE INDEX idx_messages_created_at ON messages(created_at);
-CREATE INDEX idx_messages_sent_at ON messages(sent_at);
-CREATE INDEX idx_messages_from_number ON messages(from_number);
-CREATE INDEX idx_messages_to_number ON messages(to_number);
-
--- Template indexes
-CREATE INDEX idx_message_templates_org_id ON message_templates(organization_id);
-CREATE INDEX idx_message_templates_campaign_id ON message_templates(campaign_id);
-CREATE INDEX idx_message_templates_category ON message_templates(category);
-CREATE INDEX idx_message_templates_created_by ON message_templates(created_by);
-
--- Compliance and audit indexes
-CREATE INDEX idx_consent_records_contact_id ON consent_records(contact_id);
-CREATE INDEX idx_consent_records_org_id ON consent_records(organization_id);
-CREATE INDEX idx_consent_records_campaign_id ON consent_records(campaign_id);
-CREATE INDEX idx_consent_records_status ON consent_records(consent_status);
-CREATE INDEX idx_consent_records_type ON consent_records(consent_type);
-CREATE INDEX idx_audit_logs_org_id ON audit_logs(organization_id);
-CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
-CREATE INDEX idx_compliance_violations_org_id ON compliance_violations(organization_id);
-CREATE INDEX idx_compliance_violations_status ON compliance_violations(status);
-CREATE INDEX idx_compliance_violations_severity ON compliance_violations(severity);
-CREATE INDEX idx_compliance_violations_type ON compliance_violations(violation_type);
-
--- API and integration indexes
-CREATE INDEX idx_api_keys_org_id ON api_keys(organization_id);
-CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX idx_api_keys_prefix ON api_keys(key_prefix);
-CREATE INDEX idx_api_keys_active ON api_keys(is_active);
-CREATE INDEX idx_webhooks_org_id ON webhooks(organization_id);
-CREATE INDEX idx_webhooks_active ON webhooks(is_active);
-CREATE INDEX idx_webhook_deliveries_webhook_id ON webhook_deliveries(webhook_id);
-CREATE INDEX idx_webhook_deliveries_event_type ON webhook_deliveries(event_type);
-CREATE INDEX idx_webhook_deliveries_triggered_at ON webhook_deliveries(triggered_at);
-
--- Billing indexes
-CREATE INDEX idx_billing_accounts_org_id ON billing_accounts(organization_id);
-CREATE INDEX idx_billing_accounts_stripe_customer ON billing_accounts(stripe_customer_id);
-CREATE INDEX idx_usage_records_org_id ON usage_records(organization_id);
-CREATE INDEX idx_usage_records_billing_account ON usage_records(billing_account_id);
-CREATE INDEX idx_usage_records_period ON usage_records(period_start, period_end);
-
--- =============================================================================
--- COMPOSITE INDEXES FOR COMPLEX QUERIES
--- =============================================================================
-
--- Message analytics indexes
-CREATE INDEX idx_messages_org_created ON messages(organization_id, created_at);
-CREATE INDEX idx_messages_campaign_created ON messages(campaign_id, created_at);
-CREATE INDEX idx_messages_status_created ON messages(status, created_at);
-CREATE INDEX idx_messages_org_status_created ON messages(organization_id, status, created_at);
-
--- Contact engagement indexes
-CREATE INDEX idx_contacts_org_opted_in ON contacts(organization_id, opted_in);
-CREATE INDEX idx_contacts_org_created ON contacts(organization_id, created_at);
-CREATE INDEX idx_contacts_org_last_message ON contacts(organization_id, last_message_sent_at);
-
--- Audit and compliance indexes
-CREATE INDEX idx_audit_logs_org_created ON audit_logs(organization_id, created_at);
-CREATE INDEX idx_violations_org_status ON compliance_violations(organization_id, status);
-
--- =============================================================================
--- TRIGGERS FOR AUTOMATIC UPDATES
--- =============================================================================
-
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Apply update triggers to relevant tables
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_user_organizations_updated_at BEFORE UPDATE ON user_organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_brands_updated_at BEFORE UPDATE ON brands FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_campaigns_updated_at BEFORE UPDATE ON campaigns FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_phone_numbers_updated_at BEFORE UPDATE ON phone_numbers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_contact_lists_updated_at BEFORE UPDATE ON contact_lists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_contacts_updated_at BEFORE UPDATE ON contacts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_messages_updated_at BEFORE UPDATE ON messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_message_templates_updated_at BEFORE UPDATE ON message_templates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_consent_records_updated_at BEFORE UPDATE ON consent_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_compliance_violations_updated_at BEFORE UPDATE ON compliance_violations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_api_keys_updated_at BEFORE UPDATE ON api_keys FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_webhooks_updated_at BEFORE UPDATE ON webhooks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_billing_accounts_updated_at BEFORE UPDATE ON billing_accounts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_usage_records_updated_at BEFORE UPDATE ON usage_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================================================
 -- VIEWS FOR COMMON QUERIES
@@ -992,8 +981,8 @@ SELECT
     c.last_response_at,
     o.legal_name as organization_name,
     CASE 
-        WHEN c.last_response_at > c.last_message_sent_at - INTERVAL '7 days' THEN 'active'
-        WHEN c.last_message_sent_at > CURRENT_TIMESTAMP - INTERVAL '30 days' THEN 'inactive'
+        WHEN c.last_response_at > DATE_SUB(c.last_message_sent_at, INTERVAL 7 DAY) THEN 'active'
+        WHEN c.last_message_sent_at > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 'inactive'
         ELSE 'dormant'
     END as engagement_status
 FROM contacts c
@@ -1003,7 +992,7 @@ WHERE c.deleted_at IS NULL;
 -- View for message analytics
 CREATE VIEW message_analytics AS
 SELECT 
-    DATE_TRUNC('day', created_at) as date,
+    DATE(created_at) as date,
     organization_id,
     campaign_id,
     COUNT(*) as total_messages,
@@ -1013,34 +1002,144 @@ SELECT
     COUNT(CASE WHEN direction = 'outbound' THEN 1 END) as outbound_messages,
     SUM(price) as total_cost
 FROM messages
-GROUP BY DATE_TRUNC('day', created_at), organization_id, campaign_id;
+GROUP BY DATE(created_at), organization_id, campaign_id;
 
 -- =============================================================================
--- SECURITY POLICIES (ROW LEVEL SECURITY)
+-- STORED PROCEDURES FOR COMMON OPERATIONS
 -- =============================================================================
 
--- Enable RLS on sensitive tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
-ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+DELIMITER //
 
--- Example RLS policies (to be customized based on application requirements)
--- Users can only see their own data
-CREATE POLICY users_self_access ON users
-    FOR ALL
-    USING (id = current_setting('app.current_user_id')::uuid);
+-- Procedure to update contact engagement metrics
+CREATE PROCEDURE UpdateContactEngagement(IN contact_id_param CHAR(36))
+BEGIN
+    DECLARE total_sent INT DEFAULT 0;
+    DECLARE total_delivered INT DEFAULT 0;
+    DECLARE total_failed INT DEFAULT 0;
+    DECLARE last_sent DATETIME;
+    DECLARE last_delivered DATETIME;
+    
+    -- Calculate message statistics
+    SELECT 
+        COUNT(*),
+        COUNT(CASE WHEN status = 'delivered' THEN 1 END),
+        COUNT(CASE WHEN status = 'failed' THEN 1 END),
+        MAX(sent_at),
+        MAX(delivered_at)
+    INTO total_sent, total_delivered, total_failed, last_sent, last_delivered
+    FROM messages 
+    WHERE contact_id = contact_id_param;
+    
+    -- Update contact record
+    UPDATE contacts 
+    SET 
+        total_messages_sent = total_sent,
+        total_messages_delivered = total_delivered,
+        total_messages_failed = total_failed,
+        last_message_sent_at = last_sent,
+        last_message_delivered_at = last_delivered,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = contact_id_param;
+END//
 
--- Organization data access based on membership
-CREATE POLICY organizations_member_access ON organizations
-    FOR ALL
-    USING (id IN (
-        SELECT organization_id 
-        FROM user_organizations 
-        WHERE user_id = current_setting('app.current_user_id')::uuid
-    ));
+-- Procedure to update contact list counts
+CREATE PROCEDURE UpdateContactListCounts(IN list_id_param CHAR(36))
+BEGIN
+    DECLARE total_count INT DEFAULT 0;
+    DECLARE active_count INT DEFAULT 0;
+    DECLARE opted_in_count INT DEFAULT 0;
+    
+    -- Calculate counts
+    SELECT 
+        COUNT(*),
+        COUNT(CASE WHEN c.deleted_at IS NULL THEN 1 END),
+        COUNT(CASE WHEN c.opted_in = TRUE AND c.deleted_at IS NULL THEN 1 END)
+    INTO total_count, active_count, opted_in_count
+    FROM contact_list_memberships clm
+    JOIN contacts c ON clm.contact_id = c.id
+    WHERE clm.contact_list_id = list_id_param
+    AND clm.status = 'active';
+    
+    -- Update contact list
+    UPDATE contact_lists 
+    SET 
+        total_contacts = total_count,
+        active_contacts = active_count,
+        opted_in_contacts = opted_in_count,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = list_id_param;
+END//
+
+DELIMITER ;
+
+-- =============================================================================
+-- TRIGGERS FOR AUTOMATIC UPDATES
+-- =============================================================================
+
+DELIMITER //
+
+-- Trigger to update contact engagement when messages are inserted/updated
+CREATE TRIGGER tr_messages_after_insert 
+AFTER INSERT ON messages
+FOR EACH ROW
+BEGIN
+    IF NEW.contact_id IS NOT NULL THEN
+        CALL UpdateContactEngagement(NEW.contact_id);
+    END IF;
+END//
+
+CREATE TRIGGER tr_messages_after_update 
+AFTER UPDATE ON messages
+FOR EACH ROW
+BEGIN
+    IF NEW.contact_id IS NOT NULL THEN
+        CALL UpdateContactEngagement(NEW.contact_id);
+    END IF;
+END//
+
+-- Trigger to update contact list counts when memberships change
+CREATE TRIGGER tr_contact_list_memberships_after_insert 
+AFTER INSERT ON contact_list_memberships
+FOR EACH ROW
+BEGIN
+    CALL UpdateContactListCounts(NEW.contact_list_id);
+END//
+
+CREATE TRIGGER tr_contact_list_memberships_after_delete 
+AFTER DELETE ON contact_list_memberships
+FOR EACH ROW
+BEGIN
+    CALL UpdateContactListCounts(OLD.contact_list_id);
+END//
+
+-- Trigger to update contact list counts when contact opt-in status changes
+CREATE TRIGGER tr_contacts_after_update 
+AFTER UPDATE ON contacts
+FOR EACH ROW
+BEGIN
+    IF OLD.opted_in != NEW.opted_in THEN
+        -- Update all lists this contact belongs to
+        UPDATE contact_lists cl
+        SET 
+            opted_in_contacts = (
+                SELECT COUNT(*)
+                FROM contact_list_memberships clm
+                JOIN contacts c ON clm.contact_id = c.id
+                WHERE clm.contact_list_id = cl.id
+                AND c.opted_in = TRUE
+                AND c.deleted_at IS NULL
+                AND clm.status = 'active'
+            ),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE cl.id IN (
+            SELECT contact_list_id 
+            FROM contact_list_memberships 
+            WHERE contact_id = NEW.id AND status = 'active'
+        );
+    END IF;
+END//
+
+DELIMITER ;
 
 -- =============================================================================
 -- INITIAL DATA AND CONFIGURATION
@@ -1049,73 +1148,86 @@ CREATE POLICY organizations_member_access ON organizations
 -- Insert initial configuration data
 INSERT INTO organizations (id, legal_name, display_name, business_type, industry, website_url, verification_status) 
 VALUES (
-    gen_random_uuid(),
+    UUID(),
     'Platform Administrator',
     'Admin Organization',
     'corporation',
     'Technology',
     'https://admin.smsplatform.com',
     'verified'
-) ON CONFLICT DO NOTHING;
+);
 
 -- =============================================================================
 -- SCHEMA VALIDATION AND CONSTRAINTS
 -- =============================================================================
 
--- Add check constraints for data validation
-ALTER TABLE users ADD CONSTRAINT users_email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-ALTER TABLE users ADD CONSTRAINT users_phone_format CHECK (phone_number IS NULL OR phone_number ~ '^\+?[1-9]\d{1,14}$');
-ALTER TABLE contacts ADD CONSTRAINT contacts_phone_format CHECK (phone_number ~ '^\+?[1-9]\d{1,14}$');
-ALTER TABLE messages ADD CONSTRAINT messages_price_positive CHECK (price IS NULL OR price >= 0);
-ALTER TABLE brands ADD CONSTRAINT brands_website_format CHECK (website ~* '^https?://');
-ALTER TABLE usage_records ADD CONSTRAINT usage_records_period_valid CHECK (period_end > period_start);
+-- Add check constraints for data validation where MySQL supports them
+-- Note: MySQL 8.0+ supports CHECK constraints
+
+-- Email format validation
+ALTER TABLE users ADD CONSTRAINT chk_users_email_format 
+CHECK (email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$');
+
+-- Phone format validation
+ALTER TABLE users ADD CONSTRAINT chk_users_phone_format 
+CHECK (phone_number IS NULL OR phone_number REGEXP '^\\+?[1-9][0-9]{1,14}$');
+
+ALTER TABLE contacts ADD CONSTRAINT chk_contacts_phone_format 
+CHECK (phone_number REGEXP '^\\+?[1-9][0-9]{1,14}$');
+
+-- Price validation
+ALTER TABLE messages ADD CONSTRAINT chk_messages_price_positive 
+CHECK (price IS NULL OR price >= 0);
+
+-- Website URL validation
+ALTER TABLE brands ADD CONSTRAINT chk_brands_website_format 
+CHECK (website REGEXP '^https?://');
+
+-- Usage period validation
+ALTER TABLE usage_records ADD CONSTRAINT chk_usage_records_period_valid 
+CHECK (period_end > period_start);
 
 -- =============================================================================
--- COMMENTS AND DOCUMENTATION
--- =============================================================================
-
--- Add table comments for documentation
-COMMENT ON TABLE users IS 'Core user authentication and profile information';
-COMMENT ON TABLE organizations IS 'Business entities that use the platform';
-COMMENT ON TABLE brands IS 'TCR Brand Registration entities for 10DLC compliance';
-COMMENT ON TABLE campaigns IS 'TCR Campaign Registration entities for message use cases';
-COMMENT ON TABLE contacts IS 'Individual contact records with consent and engagement tracking';
-COMMENT ON TABLE messages IS 'All sent and received SMS/MMS messages with delivery tracking';
-COMMENT ON TABLE consent_records IS 'Comprehensive consent tracking for compliance';
-COMMENT ON TABLE audit_logs IS 'Complete audit trail for all system actions';
-COMMENT ON TABLE compliance_violations IS 'Track and manage compliance violations';
-
--- Add column comments for important fields
-COMMENT ON COLUMN brands.tcr_brand_id IS 'Unique identifier from The Campaign Registry';
-COMMENT ON COLUMN campaigns.tcr_campaign_id IS 'Unique identifier from The Campaign Registry';
-COMMENT ON COLUMN messages.message_sid IS 'Twilio unique message identifier';
-COMMENT ON COLUMN contacts.opted_in_source IS 'Source of opt-in: web_form, api, import, sms';
-COMMENT ON COLUMN consent_records.legal_basis IS 'GDPR legal basis for processing';
-
--- =============================================================================
--- END OF SCHEMA
+-- SCHEMA METADATA
 -- =============================================================================
 
 -- Schema version tracking
 CREATE TABLE schema_migrations (
     version VARCHAR(255) PRIMARY KEY,
-    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO schema_migrations (version) VALUES ('1.0.0_initial_schema');
+INSERT INTO schema_migrations (version) VALUES ('1.0.0_mysql_initial_schema');
 
--- Performance analysis helper
--- Run this to analyze table sizes and index usage
+-- =============================================================================
+-- PERFORMANCE ANALYSIS QUERIES
+-- =============================================================================
+
+-- Table sizes and index usage analysis
 /*
 SELECT 
-    schemaname,
-    tablename,
-    attname,
-    n_distinct,
-    correlation,
-    most_common_vals,
-    most_common_freqs
-FROM pg_stats 
-WHERE schemaname = 'public' 
-ORDER BY tablename, attname;
+    TABLE_NAME,
+    TABLE_ROWS,
+    DATA_LENGTH,
+    INDEX_LENGTH,
+    (DATA_LENGTH + INDEX_LENGTH) as TOTAL_SIZE
+FROM information_schema.TABLES 
+WHERE TABLE_SCHEMA = 'sms_platform'
+ORDER BY (DATA_LENGTH + INDEX_LENGTH) DESC;
+
+-- Index usage statistics
+SELECT 
+    TABLE_SCHEMA,
+    TABLE_NAME,
+    INDEX_NAME,
+    SEQ_IN_INDEX,
+    COLUMN_NAME,
+    CARDINALITY
+FROM information_schema.STATISTICS 
+WHERE TABLE_SCHEMA = 'sms_platform'
+ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX;
 */
+
+-- =============================================================================
+-- END OF MYSQL SCHEMA
+-- =============================================================================

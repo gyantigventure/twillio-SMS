@@ -605,13 +605,17 @@ This document outlines a comprehensive project plan for developing a 10DLC (10-D
 - **Node.js 18+ LTS** - Runtime environment
 - **Express.js 4.18+** - Web application framework
 - **TypeScript 5.0+** - Type-safe JavaScript development
-- **Fastify** - Alternative high-performance web framework
 
 #### Database & Caching
-- **PostgreSQL 15+** - Primary relational database
+- **MySQL 8.0+** - Primary relational database
 - **Redis 7.0+** - Caching and session storage
 - **MongoDB** - Document storage for logs and analytics
 - **Elasticsearch** - Search and analytics engine
+
+#### ORM & Database Tools
+- **TypeORM** - Object-relational mapping for TypeScript
+- **Prisma** - Alternative ORM with type safety
+- **MySQL2** - MySQL client for Node.js
 
 #### Message Queue & Processing
 - **Apache Kafka** - Event streaming platform
@@ -628,22 +632,24 @@ This document outlines a comprehensive project plan for developing a 10DLC (10-D
 ### 6.2 Frontend Technologies
 
 #### Core Framework
-- **React 18+** - UI library
-- **Next.js 13+** - React framework with SSR/SSG
+- **Angular 17+** - Full-featured web application framework
 - **TypeScript 5.0+** - Type-safe development
-- **Tailwind CSS 3.3+** - Utility-first CSS framework
+- **Angular CLI** - Command-line interface and build tools
+- **Angular Material** - UI component library
 
 #### State Management & Data Fetching
-- **Zustand** - Lightweight state management
-- **TanStack Query (React Query)** - Data fetching and caching
-- **React Hook Form** - Form handling
-- **Zod** - Schema validation
+- **NgRx** - Reactive state management (Redux pattern)
+- **Angular HttpClient** - HTTP client for API communication
+- **RxJS** - Reactive programming with Observables
+- **Angular Reactive Forms** - Form handling and validation
 
 #### UI Components & Styling
-- **Headless UI** - Unstyled accessible components
-- **Radix UI** - Low-level UI primitives
-- **Framer Motion** - Animation library
-- **Chart.js/Recharts** - Data visualization
+- **Angular Material** - Material Design components
+- **Tailwind CSS 3.3+** - Utility-first CSS framework
+- **Angular CDK** - Component development kit
+- **Angular Flex Layout** - Layout API using CSS flexbox
+- **ng2-charts** - Chart.js wrapper for Angular
+- **Angular Animations** - Built-in animation framework
 
 ### 6.3 DevOps & Infrastructure
 
@@ -692,22 +698,22 @@ This document outlines a comprehensive project plan for developing a 10DLC (10-D
 
 #### Users & Organizations
 ```sql
--- Users table
+-- Users table (MySQL)
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
-    role user_role NOT NULL DEFAULT 'user',
+    role ENUM('super_admin', 'admin', 'user') NOT NULL DEFAULT 'user',
     email_verified BOOLEAN DEFAULT FALSE,
     phone_verified BOOLEAN DEFAULT FALSE,
     mfa_enabled BOOLEAN DEFAULT FALSE,
     mfa_secret VARCHAR(255),
-    last_login_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_login_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Organizations table

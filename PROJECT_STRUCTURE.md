@@ -44,106 +44,180 @@ twillio-SMS/
 │       ├── performance.md
 │       └── monitoring.md
 │
-├── frontend/                      # React/Next.js Frontend
-│   ├── public/
-│   │   ├── favicon.ico
-│   │   ├── manifest.json
-│   │   └── icons/
+├── frontend/                      # Angular Frontend
 │   ├── src/
-│   │   ├── components/            # Reusable UI components
-│   │   │   ├── ui/                # Basic UI components
-│   │   │   │   ├── Button.tsx
-│   │   │   │   ├── Input.tsx
-│   │   │   │   ├── Modal.tsx
-│   │   │   │   ├── Table.tsx
-│   │   │   │   └── index.ts
-│   │   │   ├── forms/             # Form components
-│   │   │   │   ├── LoginForm.tsx
-│   │   │   │   ├── RegisterForm.tsx
-│   │   │   │   ├── BrandForm.tsx
-│   │   │   │   └── CampaignForm.tsx
+│   │   ├── app/
+│   │   │   ├── core/              # Core functionality
+│   │   │   │   ├── guards/        # Route guards
+│   │   │   │   │   ├── auth.guard.ts
+│   │   │   │   │   └── role.guard.ts
+│   │   │   │   ├── interceptors/  # HTTP interceptors
+│   │   │   │   │   ├── auth.interceptor.ts
+│   │   │   │   │   ├── error.interceptor.ts
+│   │   │   │   │   └── loading.interceptor.ts
+│   │   │   │   ├── services/      # Core services
+│   │   │   │   │   ├── auth.service.ts
+│   │   │   │   │   ├── api.service.ts
+│   │   │   │   │   ├── storage.service.ts
+│   │   │   │   │   └── websocket.service.ts
+│   │   │   │   └── models/        # Core interfaces
+│   │   │   │       ├── user.model.ts
+│   │   │   │       ├── auth.model.ts
+│   │   │   │       └── api.model.ts
+│   │   │   ├── shared/            # Shared components and modules
+│   │   │   │   ├── components/    # Reusable UI components
+│   │   │   │   │   ├── button/
+│   │   │   │   │   │   ├── button.component.ts
+│   │   │   │   │   │   ├── button.component.html
+│   │   │   │   │   │   └── button.component.scss
+│   │   │   │   │   ├── modal/
+│   │   │   │   │   │   ├── modal.component.ts
+│   │   │   │   │   │   ├── modal.component.html
+│   │   │   │   │   │   └── modal.component.scss
+│   │   │   │   │   ├── table/
+│   │   │   │   │   │   ├── table.component.ts
+│   │   │   │   │   │   ├── table.component.html
+│   │   │   │   │   │   └── table.component.scss
+│   │   │   │   │   └── charts/
+│   │   │   │   │       ├── line-chart/
+│   │   │   │   │       ├── bar-chart/
+│   │   │   │   │       └── pie-chart/
+│   │   │   │   ├── pipes/         # Custom pipes
+│   │   │   │   │   ├── format-phone.pipe.ts
+│   │   │   │   │   ├── time-ago.pipe.ts
+│   │   │   │   │   └── currency.pipe.ts
+│   │   │   │   ├── directives/    # Custom directives
+│   │   │   │   │   ├── autofocus.directive.ts
+│   │   │   │   │   └── click-outside.directive.ts
+│   │   │   │   └── validators/    # Custom validators
+│   │   │   │       ├── phone.validator.ts
+│   │   │   │       ├── email.validator.ts
+│   │   │   │       └── password.validator.ts
+│   │   │   ├── features/          # Feature modules
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── login/
+│   │   │   │   │   │   ├── register/
+│   │   │   │   │   │   └── mfa/
+│   │   │   │   │   ├── services/
+│   │   │   │   │   ├── guards/
+│   │   │   │   │   └── auth.module.ts
+│   │   │   │   ├── dashboard/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── overview/
+│   │   │   │   │   │   ├── metrics/
+│   │   │   │   │   │   └── recent-activity/
+│   │   │   │   │   ├── services/
+│   │   │   │   │   └── dashboard.module.ts
+│   │   │   │   ├── brands/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── brand-list/
+│   │   │   │   │   │   ├── brand-form/
+│   │   │   │   │   │   └── brand-detail/
+│   │   │   │   │   ├── services/
+│   │   │   │   │   │   └── brand.service.ts
+│   │   │   │   │   └── brands.module.ts
+│   │   │   │   ├── campaigns/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── campaign-list/
+│   │   │   │   │   │   ├── campaign-form/
+│   │   │   │   │   │   └── campaign-detail/
+│   │   │   │   │   ├── services/
+│   │   │   │   │   │   └── campaign.service.ts
+│   │   │   │   │   └── campaigns.module.ts
+│   │   │   │   ├── messages/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── message-compose/
+│   │   │   │   │   │   ├── message-history/
+│   │   │   │   │   │   └── message-templates/
+│   │   │   │   │   ├── services/
+│   │   │   │   │   │   └── message.service.ts
+│   │   │   │   │   └── messages.module.ts
+│   │   │   │   ├── contacts/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── contact-list/
+│   │   │   │   │   │   ├── contact-import/
+│   │   │   │   │   │   └── contact-segments/
+│   │   │   │   │   ├── services/
+│   │   │   │   │   │   └── contact.service.ts
+│   │   │   │   │   └── contacts.module.ts
+│   │   │   │   └── admin/
+│   │   │   │       ├── components/
+│   │   │   │       │   ├── user-management/
+│   │   │   │       │   ├── organization-settings/
+│   │   │   │       │   └── compliance-dashboard/
+│   │   │   │       ├── services/
+│   │   │   │       └── admin.module.ts
 │   │   │   ├── layout/            # Layout components
-│   │   │   │   ├── Header.tsx
-│   │   │   │   ├── Sidebar.tsx
-│   │   │   │   ├── Footer.tsx
-│   │   │   │   └── Layout.tsx
-│   │   │   └── charts/            # Chart components
-│   │   │       ├── LineChart.tsx
-│   │   │       ├── BarChart.tsx
-│   │   │       └── PieChart.tsx
-│   │   ├── pages/                 # Next.js pages
-│   │   │   ├── _app.tsx
-│   │   │   ├── _document.tsx
-│   │   │   ├── index.tsx
-│   │   │   ├── login.tsx
-│   │   │   ├── register.tsx
-│   │   │   ├── dashboard/
-│   │   │   │   ├── index.tsx
-│   │   │   │   └── analytics.tsx
-│   │   │   ├── brands/
-│   │   │   │   ├── index.tsx
-│   │   │   │   ├── create.tsx
-│   │   │   │   └── [id].tsx
-│   │   │   ├── campaigns/
-│   │   │   │   ├── index.tsx
-│   │   │   │   ├── create.tsx
-│   │   │   │   └── [id].tsx
-│   │   │   ├── messages/
-│   │   │   │   ├── index.tsx
-│   │   │   │   ├── compose.tsx
-│   │   │   │   └── history.tsx
-│   │   │   ├── contacts/
-│   │   │   │   ├── index.tsx
-│   │   │   │   ├── lists.tsx
-│   │   │   │   └── import.tsx
-│   │   │   └── admin/
-│   │   │       ├── users.tsx
-│   │   │       ├── organizations.tsx
-│   │   │       └── compliance.tsx
-│   │   ├── hooks/                 # Custom React hooks
-│   │   │   ├── useAuth.ts
-│   │   │   ├── useApi.ts
-│   │   │   ├── useLocalStorage.ts
-│   │   │   └── useWebSocket.ts
-│   │   ├── store/                 # State management
-│   │   │   ├── authStore.ts
-│   │   │   ├── userStore.ts
-│   │   │   ├── brandStore.ts
-│   │   │   └── index.ts
-│   │   ├── services/              # API services
-│   │   │   ├── api.ts
-│   │   │   ├── auth.ts
-│   │   │   ├── users.ts
-│   │   │   ├── brands.ts
-│   │   │   ├── campaigns.ts
-│   │   │   ├── messages.ts
-│   │   │   └── contacts.ts
-│   │   ├── utils/                 # Utility functions
-│   │   │   ├── validation.ts
-│   │   │   ├── formatting.ts
-│   │   │   ├── constants.ts
-│   │   │   └── helpers.ts
-│   │   ├── types/                 # TypeScript type definitions
-│   │   │   ├── auth.ts
-│   │   │   ├── user.ts
-│   │   │   ├── brand.ts
-│   │   │   ├── campaign.ts
-│   │   │   ├── message.ts
-│   │   │   └── api.ts
-│   │   └── styles/                # Styling files
-│   │       ├── globals.css
-│   │       ├── components.css
-│   │       └── tailwind.config.js
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   ├── tsconfig.json
+│   │   │   │   ├── header/
+│   │   │   │   │   ├── header.component.ts
+│   │   │   │   │   ├── header.component.html
+│   │   │   │   │   └── header.component.scss
+│   │   │   │   ├── sidebar/
+│   │   │   │   │   ├── sidebar.component.ts
+│   │   │   │   │   ├── sidebar.component.html
+│   │   │   │   │   └── sidebar.component.scss
+│   │   │   │   ├── footer/
+│   │   │   │   │   ├── footer.component.ts
+│   │   │   │   │   ├── footer.component.html
+│   │   │   │   │   └── footer.component.scss
+│   │   │   │   └── main-layout/
+│   │   │   │       ├── main-layout.component.ts
+│   │   │   │       ├── main-layout.component.html
+│   │   │   │       └── main-layout.component.scss
+│   │   │   ├── store/             # NgRx store
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── auth.actions.ts
+│   │   │   │   │   ├── auth.effects.ts
+│   │   │   │   │   ├── auth.reducer.ts
+│   │   │   │   │   └── auth.selectors.ts
+│   │   │   │   ├── user/
+│   │   │   │   │   ├── user.actions.ts
+│   │   │   │   │   ├── user.effects.ts
+│   │   │   │   │   ├── user.reducer.ts
+│   │   │   │   │   └── user.selectors.ts
+│   │   │   │   ├── brands/
+│   │   │   │   │   ├── brands.actions.ts
+│   │   │   │   │   ├── brands.effects.ts
+│   │   │   │   │   ├── brands.reducer.ts
+│   │   │   │   │   └── brands.selectors.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── app-routing.module.ts
+│   │   │   ├── app.component.ts
+│   │   │   ├── app.component.html
+│   │   │   ├── app.component.scss
+│   │   │   └── app.module.ts
+│   │   ├── assets/
+│   │   │   ├── images/
+│   │   │   ├── icons/
+│   │   │   ├── styles/
+│   │   │   │   ├── variables.scss
+│   │   │   │   ├── mixins.scss
+│   │   │   │   └── themes.scss
+│   │   │   └── i18n/
+│   │   │       ├── en.json
+│   │   │       └── es.json
+│   │   ├── environments/
+│   │   │   ├── environment.ts
+│   │   │   ├── environment.prod.ts
+│   │   │   └── environment.staging.ts
+│   │   ├── main.ts
+│   │   ├── polyfills.ts
+│   │   ├── styles.scss
+│   │   └── index.html
+│   ├── angular.json
 │   ├── package.json
-│   └── .env.local.example
+│   ├── tsconfig.json
+│   ├── tsconfig.app.json
+│   ├── tsconfig.spec.json
+│   ├── karma.conf.js
+│   ├── tailwind.config.js
+│   └── .env.example
 │
 ├── backend/                       # Node.js Backend
 │   ├── src/
 │   │   ├── config/                # Configuration files
-│   │   │   ├── database.ts
+│   │   │   ├── database.ts        # MySQL configuration
 │   │   │   ├── redis.ts
 │   │   │   ├── kafka.ts
 │   │   │   ├── twilio.ts
@@ -277,7 +351,7 @@ twillio-SMS/
 │   │   │   ├── brands.json
 │   │   │   └── campaigns.json
 │   │   └── setup.ts
-│   ├── migrations/                # Database migrations
+│   ├── migrations/                # MySQL Database migrations
 │   │   ├── 001_create_users.sql
 │   │   ├── 002_create_organizations.sql
 │   │   ├── 003_create_brands.sql
@@ -488,20 +562,21 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=postgresql://user:pass@postgres:5432/sms_platform
+      - DATABASE_URL=mysql://user:password@mysql:3306/sms_platform
       - REDIS_URL=redis://redis:6379
     depends_on:
-      - postgres
+      - mysql
       - redis
 
-  postgres:
-    image: postgres:15
+  mysql:
+    image: mysql:8.0
     environment:
-      - POSTGRES_DB=sms_platform
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
+      - MYSQL_DATABASE=sms_platform
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=rootpassword
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
       - ./backend/migrations:/docker-entrypoint-initdb.d
 
   redis:
@@ -518,7 +593,7 @@ services:
       - es_data:/usr/share/elasticsearch/data
 
 volumes:
-  postgres_data:
+  mysql_data:
   es_data:
 ```
 
@@ -532,7 +607,7 @@ PORT=5000
 API_VERSION=v1
 
 # Database
-DATABASE_URL=postgresql://username:password@localhost:5432/sms_platform
+DATABASE_URL=mysql://username:password@localhost:3306/sms_platform
 REDIS_URL=redis://localhost:6379
 
 # Authentication

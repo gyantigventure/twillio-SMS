@@ -75,19 +75,20 @@ graph TD
 
 ### Backend
 - **Runtime**: Node.js 18+ LTS
-- **Framework**: Express.js / Fastify
+- **Framework**: Express.js with TypeScript
 - **Language**: TypeScript 5.0+
-- **Database**: PostgreSQL 15+ (primary), Redis 7.0+ (cache)
+- **Database**: MySQL 8.0+ (primary), Redis 7.0+ (cache)
 - **Message Queue**: Apache Kafka / RabbitMQ
 - **Search**: Elasticsearch
+- **ORM**: TypeORM / Prisma
 
 ### Frontend
-- **Framework**: React 18+ with Next.js 13+
+- **Framework**: Angular 17+
 - **Language**: TypeScript 5.0+
-- **Styling**: Tailwind CSS 3.3+
-- **State Management**: Zustand
-- **Data Fetching**: TanStack Query (React Query)
-- **Forms**: React Hook Form with Zod validation
+- **Styling**: Angular Material + Tailwind CSS
+- **State Management**: NgRx (Redux pattern)
+- **HTTP Client**: Angular HttpClient
+- **Forms**: Angular Reactive Forms with custom validators
 
 ### Infrastructure
 - **Cloud**: AWS / Google Cloud / Azure
@@ -105,7 +106,7 @@ graph TD
 
 ## 📊 Database Schema
 
-The platform uses a comprehensive PostgreSQL schema with the following core entities:
+The platform uses a comprehensive MySQL schema with the following core entities:
 
 - **Users & Organizations** - Authentication, profiles, team management
 - **Brands & Campaigns** - TCR registration, compliance tracking
@@ -174,8 +175,9 @@ See [`DATABASE_SCHEMA.sql`](./DATABASE_SCHEMA.sql) for complete schema definitio
 
 ### Prerequisites
 - Node.js 18+ LTS
-- PostgreSQL 15+
+- MySQL 8.0+
 - Redis 7.0+
+- Angular CLI 17+
 - Docker & Docker Compose
 - Terraform (for infrastructure)
 

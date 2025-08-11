@@ -31,7 +31,7 @@ This document details the technical architecture for the 10DLC SMS platform, pro
           │                                       │
 ┌─────────▼─────────┐                   ┌─────────▼─────────┐
 │   Web Frontend    │                   │   API Gateway     │
-│  (React/Next.js)  │                   │ (Express/Fastify) │
+│     (Angular)     │                   │   (Express.js)    │
 │                   │                   │                   │
 │ ┌───────────────┐ │                   │ ┌───────────────┐ │
 │ │   Dashboard   │ │                   │ │ Rate Limiting │ │
@@ -80,7 +80,7 @@ This document details the technical architecture for the 10DLC SMS platform, pro
 │                                    Data Layer                                                   │
 │                                                                                                 │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐              │
-│  │ PostgreSQL  │ │    Redis    │ │ Elasticsearch│ │   AWS S3    │ │   MongoDB   │              │
+│  │    MySQL    │ │    Redis    │ │ Elasticsearch│ │   AWS S3    │ │   MongoDB   │              │
 │  │  (Primary)  │ │   (Cache)   │ │   (Search)  │ │ (Files/CDN) │ │   (Logs)    │              │
 │  │             │ │             │ │             │ │             │ │             │              │
 │  │ • Users     │ │ • Sessions  │ │ • Messages  │ │ • Documents │ │ • Audit     │              │
@@ -125,7 +125,7 @@ This document details the technical architecture for the 10DLC SMS platform, pro
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Frontend Architecture                       │
-│                     (React/Next.js)                           │
+│                        (Angular)                              │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────────────┐
@@ -140,7 +140,7 @@ This document details the technical architecture for the 10DLC SMS platform, pro
 └─────────────────────────┬───────────────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────────────┐
-│                    Route Components                            │
+│                     Angular Components                         │
 │                                                                 │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐               │
 │  │ Dashboard   │ │    Users    │ │    Brands   │               │
@@ -179,12 +179,12 @@ This document details the technical architecture for the 10DLC SMS platform, pro
 │                    State Management                            │
 │                                                                 │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐               │
-│  │   Zustand   │ │ React Query │ │ React Hook  │               │
-│  │    Store    │ │    Cache    │ │    Form     │               │
+│  │    NgRx     │ │ HTTP Client │ │  Reactive   │               │
+│  │    Store    │ │   Service   │ │    Forms    │               │
 │  │             │ │             │ │             │               │
 │  │ • Auth      │ │ • API Data  │ │ • Form      │               │
 │  │ • User      │ │ • Caching   │ │   State     │               │
-│  │ • UI State  │ │ • Sync      │ │ • Validation│               │
+│  │ • UI State  │ │ • HTTP Ops  │ │ • Validation│               │
 │  └─────────────┘ └─────────────┘ └─────────────┘               │
 └─────────────────────────────────────────────────────────────────┘
 ```
